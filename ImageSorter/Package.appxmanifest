@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/2010/manifest">
+
+  <Identity Name="99e244c4-6850-41f2-8530-3c3012bbc30a"
+            Publisher="CN=Leonardo"
+            Version="1.0.0.0" />
+
+  <Properties>
+    <DisplayName>ImageSorter</DisplayName>
+    <PublisherDisplayName>Leonardo</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Prerequisites>
+    <OSMinVersion>6.2.1</OSMinVersion>
+    <OSMaxVersionTested>6.2.1</OSMaxVersionTested>
+  </Prerequisites>
+
+  <Resources>
+    <Resource Language="x-generate"/>
+  </Resources>
+
+  <Applications>
+    <Application Id="App"
+        Executable="$targetnametoken$.exe"
+        EntryPoint="ImageSorter.App">
+        <VisualElements
+            DisplayName="ImageSorter"
+            Logo="Assets\Logo.png"
+            SmallLogo="Assets\SmallLogo.png"
+            Description="ImageSorter"
+            ForegroundText="light"
+            BackgroundColor="#464646">
+            <DefaultTile ShowName="allLogos" />
+            <SplashScreen Image="Assets\SplashScreen.png" />
+        </VisualElements>
+    </Application>
+  </Applications>
+  <Capabilities>
+    <Capability Name="internetClient" />
+  </Capabilities>
+</Package>
