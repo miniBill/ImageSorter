@@ -10,7 +10,7 @@
     mc:Ignorable="d">
 
     <Page.Resources>
-        <x:String x:Key="AppName">My Application</x:String>
+        <x:String x:Key="AppName">Image sorter</x:String>
         <!-- TODO: Delete this line if the key AppName is declared in App.xaml -->
 
     </Page.Resources>
