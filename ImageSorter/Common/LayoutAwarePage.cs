@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.System;
 using Windows.UI.Core;
@@ -39,7 +37,7 @@ namespace ImageSorter.Common
         /// <summary>
         /// Identifies the <see cref="DefaultViewModel"/> dependency property.
         /// </summary>
-        public static readonly DependencyProperty DefaultViewModelProperty =
+        private static readonly DependencyProperty DefaultViewModelProperty =
             DependencyProperty.Register("DefaultViewModel", typeof(IObservableMap<String, Object>),
             typeof(LayoutAwarePage), null);
 
@@ -48,40 +46,42 @@ namespace ImageSorter.Common
         /// <summary>
         /// Initializes a new instance of the <see cref="LayoutAwarePage"/> class.
         /// </summary>
-        public LayoutAwarePage()
+        protected LayoutAwarePage()
         {
             if (Windows.ApplicationModel.DesignMode.DesignModeEnabled) return;
 
             // Create an empty default view model
-            this.DefaultViewModel = new ObservableDictionary<String, Object>();
+            DefaultViewModel = new ObservableDictionary<String, Object>();
 
             // When this page is part of the visual tree make two changes:
             // 1) Map application view state to visual state for the page
             // 2) Handle keyboard and mouse navigation requests
-            this.Loaded += (sender, e) =>
+            Loaded += (sender, e) =>
             {
-                this.StartLayoutUpdates(sender, e);
+                StartLayoutUpdates(sender);
 
+// ReSharper disable CompareOfFloatsByEqualityOperator
                 // Keyboard and mouse navigation only apply when occupying the entire window
-                if (this.ActualHeight == Window.Current.Bounds.Height &&
-                    this.ActualWidth == Window.Current.Bounds.Width)
+                if (ActualHeight == Window.Current.Bounds.Height &&
+                    ActualWidth == Window.Current.Bounds.Width)
+// ReSharper restore CompareOfFloatsByEqualityOperator
                 {
                     // Listen to the window directly so focus isn't required
                     Window.Current.CoreWindow.Dispatcher.AcceleratorKeyActivated +=
                         CoreDispatcher_AcceleratorKeyActivated;
                     Window.Current.CoreWindow.PointerPressed +=
-                        this.CoreWindow_PointerPressed;
+                        CoreWindow_PointerPressed;
                 }
             };
 
             // Undo the same changes when the page is no longer visible
-            this.Unloaded += (sender, e) =>
+            Unloaded += (sender, e) =>
             {
-                this.StopLayoutUpdates(sender, e);
+                StopLayoutUpdates(sender);
                 Window.Current.CoreWindow.Dispatcher.AcceleratorKeyActivated -=
                     CoreDispatcher_AcceleratorKeyActivated;
                 Window.Current.CoreWindow.PointerPressed -=
-                    this.CoreWindow_PointerPressed;
+                    CoreWindow_PointerPressed;
             };
         }
 
@@ -93,31 +93,16 @@ namespace ImageSorter.Common
         {
             get
             {
-                return this.GetValue(DefaultViewModelProperty) as IObservableMap<String, Object>;
+                return GetValue(DefaultViewModelProperty) as IObservableMap<String, Object>;
             }
 
-            set
+            private set
             {
-                this.SetValue(DefaultViewModelProperty, value);
+                SetValue(DefaultViewModelProperty, value);
             }
         }
 
         #region Navigation support
-
-        /// <summary>
-        /// Invoked as an event handler to navigate backward in the page's associated
-        /// <see cref="Frame"/> until it reaches the top of the navigation stack.
-        /// </summary>
-        /// <param name="sender">Instance that triggered the event.</param>
-        /// <param name="e">Event data describing the conditions that led to the event.</param>
-        protected virtual void GoHome(object sender, RoutedEventArgs e)
-        {
-            // Use the navigation frame to return to the topmost page
-            if (this.Frame != null)
-            {
-                while (this.Frame.CanGoBack) this.Frame.GoBack();
-            }
-        }
 
         /// <summary>
         /// Invoked as an event handler to navigate backward in the navigation stack
@@ -126,23 +111,20 @@ namespace ImageSorter.Common
         /// <param name="sender">Instance that triggered the event.</param>
         /// <param name="e">Event data describing the conditions that led to the
         /// event.</param>
-        protected virtual void GoBack(object sender, RoutedEventArgs e)
+        protected void GoBack(object sender, RoutedEventArgs e)
         {
             // Use the navigation frame to return to the previous page
-            if (this.Frame != null && this.Frame.CanGoBack) this.Frame.GoBack();
+            if (Frame != null && Frame.CanGoBack) Frame.GoBack();
         }
 
         /// <summary>
         /// Invoked as an event handler to navigate forward in the navigation stack
         /// associated with this page's <see cref="Frame"/>.
         /// </summary>
-        /// <param name="sender">Instance that triggered the event.</param>
-        /// <param name="e">Event data describing the conditions that led to the
-        /// event.</param>
-        protected virtual void GoForward(object sender, RoutedEventArgs e)
+        private void GoForward()
         {
             // Use the navigation frame to move to the next page
-            if (this.Frame != null && this.Frame.CanGoForward) this.Frame.GoForward();
+            if (Frame != null && Frame.CanGoForward) Frame.GoForward();
         }
 
         /// <summary>
@@ -159,33 +141,31 @@ namespace ImageSorter.Common
 
             // Only investigate further when Left, Right, or the dedicated Previous or Next keys
             // are pressed
-            if ((args.EventType == CoreAcceleratorKeyEventType.SystemKeyDown ||
-                args.EventType == CoreAcceleratorKeyEventType.KeyDown) &&
-                (virtualKey == VirtualKey.Left || virtualKey == VirtualKey.Right ||
-                (int)virtualKey == 166 || (int)virtualKey == 167))
-            {
-                var coreWindow = Window.Current.CoreWindow;
-                var downState = CoreVirtualKeyStates.Down;
-                bool menuKey = (coreWindow.GetKeyState(VirtualKey.Menu) & downState) == downState;
-                bool controlKey = (coreWindow.GetKeyState(VirtualKey.Control) & downState) == downState;
-                bool shiftKey = (coreWindow.GetKeyState(VirtualKey.Shift) & downState) == downState;
-                bool noModifiers = !menuKey && !controlKey && !shiftKey;
-                bool onlyAlt = menuKey && !controlKey && !shiftKey;
+            if ((args.EventType != CoreAcceleratorKeyEventType.SystemKeyDown &&
+                 args.EventType != CoreAcceleratorKeyEventType.KeyDown) ||
+                (virtualKey != VirtualKey.Left && virtualKey != VirtualKey.Right && (int) virtualKey != 166 &&
+                 (int) virtualKey != 167)) return;
+            var coreWindow = Window.Current.CoreWindow;
+            const CoreVirtualKeyStates downState = CoreVirtualKeyStates.Down;
+            bool menuKey = (coreWindow.GetKeyState(VirtualKey.Menu) & downState) == downState;
+            bool controlKey = (coreWindow.GetKeyState(VirtualKey.Control) & downState) == downState;
+            bool shiftKey = (coreWindow.GetKeyState(VirtualKey.Shift) & downState) == downState;
+            bool noModifiers = !menuKey && !controlKey && !shiftKey;
+            bool onlyAlt = menuKey && !controlKey && !shiftKey;
 
-                if (((int)virtualKey == 166 && noModifiers) ||
-                    (virtualKey == VirtualKey.Left && onlyAlt))
-                {
-                    // When the previous key or Alt+Left are pressed navigate back
-                    args.Handled = true;
-                    this.GoBack(this, new RoutedEventArgs());
-                }
-                else if (((int)virtualKey == 167 && noModifiers) ||
-                    (virtualKey == VirtualKey.Right && onlyAlt))
-                {
-                    // When the next key or Alt+Right are pressed navigate forward
-                    args.Handled = true;
-                    this.GoForward(this, new RoutedEventArgs());
-                }
+            if (((int)virtualKey == 166 && noModifiers) ||
+                (virtualKey == VirtualKey.Left && onlyAlt))
+            {
+                // When the previous key or Alt+Left are pressed navigate back
+                args.Handled = true;
+                GoBack(this, new RoutedEventArgs());
+            }
+            else if (((int)virtualKey == 167 && noModifiers) ||
+                     (virtualKey == VirtualKey.Right && onlyAlt))
+            {
+                // When the next key or Alt+Right are pressed navigate forward
+                args.Handled = true;
+                GoForward();
             }
         }
 
@@ -211,8 +191,8 @@ namespace ImageSorter.Common
             if (backPressed ^ forwardPressed)
             {
                 args.Handled = true;
-                if (backPressed) this.GoBack(this, new RoutedEventArgs());
-                if (forwardPressed) this.GoForward(this, new RoutedEventArgs());
+                if (backPressed) GoBack(this, new RoutedEventArgs());
+                if (forwardPressed) GoForward();
             }
         }
 
@@ -228,7 +208,6 @@ namespace ImageSorter.Common
         /// </summary>
         /// <param name="sender">Instance of <see cref="Control"/> that supports visual state
         /// management corresponding to view states.</param>
-        /// <param name="e">Event data that describes how the request was made.</param>
         /// <remarks>The current view state will immediately be used to set the corresponding
         /// visual state when layout updates are requested.  A corresponding
         /// <see cref="FrameworkElement.Unloaded"/> event handler connected to
@@ -237,17 +216,17 @@ namespace ImageSorter.Common
         /// Unloaded events.</remarks>
         /// <seealso cref="DetermineVisualState"/>
         /// <seealso cref="InvalidateVisualState"/>
-        public void StartLayoutUpdates(object sender, RoutedEventArgs e)
+        private void StartLayoutUpdates(object sender)
         {
             var control = sender as Control;
             if (control == null) return;
-            if (this._layoutAwareControls == null)
+            if (_layoutAwareControls == null)
             {
                 // Start listening to view state changes when there are controls interested in updates
-                Window.Current.SizeChanged += this.WindowSizeChanged;
-                this._layoutAwareControls = new List<Control>();
+                Window.Current.SizeChanged += WindowSizeChanged;
+                _layoutAwareControls = new List<Control>();
             }
-            this._layoutAwareControls.Add(control);
+            _layoutAwareControls.Add(control);
 
             // Set the initial visual state of the control
             VisualStateManager.GoToState(control, DetermineVisualState(ApplicationView.Value), false);
@@ -255,7 +234,7 @@ namespace ImageSorter.Common
 
         private void WindowSizeChanged(object sender, WindowSizeChangedEventArgs e)
         {
-            this.InvalidateVisualState();
+            InvalidateVisualState();
         }
 
         /// <summary>
@@ -265,21 +244,18 @@ namespace ImageSorter.Common
         /// </summary>
         /// <param name="sender">Instance of <see cref="Control"/> that supports visual state
         /// management corresponding to view states.</param>
-        /// <param name="e">Event data that describes how the request was made.</param>
         /// <remarks>The current view state will immediately be used to set the corresponding
         /// visual state when layout updates are requested.</remarks>
         /// <seealso cref="StartLayoutUpdates"/>
-        public void StopLayoutUpdates(object sender, RoutedEventArgs e)
+        private void StopLayoutUpdates(object sender)
         {
             var control = sender as Control;
-            if (control == null || this._layoutAwareControls == null) return;
-            this._layoutAwareControls.Remove(control);
-            if (this._layoutAwareControls.Count == 0)
-            {
-                // Stop listening to view state changes when no controls are interested in updates
-                this._layoutAwareControls = null;
-                Window.Current.SizeChanged -= this.WindowSizeChanged;
-            }
+            if (control == null || _layoutAwareControls == null) return;
+            _layoutAwareControls.Remove(control);
+            if (_layoutAwareControls.Count != 0) return;
+            // Stop listening to view state changes when no controls are interested in updates
+            _layoutAwareControls = null;
+            Window.Current.SizeChanged -= WindowSizeChanged;
         }
 
         /// <summary>
@@ -291,7 +267,7 @@ namespace ImageSorter.Common
         /// <returns>Visual state name used to drive the
         /// <see cref="VisualStateManager"/></returns>
         /// <seealso cref="InvalidateVisualState"/>
-        protected virtual string DetermineVisualState(ApplicationViewState viewState)
+        private string DetermineVisualState(ApplicationViewState viewState)
         {
             return viewState.ToString();
         }
@@ -305,15 +281,13 @@ namespace ImageSorter.Common
         /// signal that a different value may be returned even though the view state has not
         /// changed.
         /// </remarks>
-        public void InvalidateVisualState()
+        private void InvalidateVisualState()
         {
-            if (this._layoutAwareControls != null)
+            if (_layoutAwareControls == null) return;
+            string visualState = DetermineVisualState(ApplicationView.Value);
+            foreach (var layoutAwareControl in _layoutAwareControls)
             {
-                string visualState = DetermineVisualState(ApplicationView.Value);
-                foreach (var layoutAwareControl in this._layoutAwareControls)
-                {
-                    VisualStateManager.GoToState(layoutAwareControl, visualState, false);
-                }
+                VisualStateManager.GoToState(layoutAwareControl, visualState, false);
             }
         }
 
@@ -331,17 +305,17 @@ namespace ImageSorter.Common
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             // Returning to a cached page through navigation shouldn't trigger state loading
-            if (this._pageKey != null) return;
+            if (_pageKey != null) return;
 
-            var frameState = SuspensionManager.SessionStateForFrame(this.Frame);
-            this._pageKey = "Page-" + this.Frame.BackStackDepth;
+            var frameState = SuspensionManager.SessionStateForFrame(Frame);
+            _pageKey = "Page-" + Frame.BackStackDepth;
 
             if (e.NavigationMode == NavigationMode.New)
             {
                 // Clear existing state for forward navigation when adding a new page to the
                 // navigation stack
-                var nextPageKey = this._pageKey;
-                int nextPageIndex = this.Frame.BackStackDepth;
+                var nextPageKey = _pageKey;
+                int nextPageIndex = Frame.BackStackDepth;
                 while (frameState.Remove(nextPageKey))
                 {
                     nextPageIndex++;
@@ -349,14 +323,14 @@ namespace ImageSorter.Common
                 }
 
                 // Pass the navigation parameter to the new page
-                this.LoadState(e.Parameter, null);
+                LoadState();
             }
             else
             {
                 // Pass the navigation parameter and preserved page state to the page, using
                 // the same strategy for loading suspended state and recreating pages discarded
                 // from cache
-                this.LoadState(e.Parameter, (Dictionary<String, Object>)frameState[this._pageKey]);
+                LoadState();
             }
         }
 
@@ -367,9 +341,9 @@ namespace ImageSorter.Common
         /// property provides the group to be displayed.</param>
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
-            var frameState = SuspensionManager.SessionStateForFrame(this.Frame);
+            var frameState = SuspensionManager.SessionStateForFrame(Frame);
             var pageState = new Dictionary<String, Object>();
-            this.SaveState(pageState);
+            SaveState();
             frameState[_pageKey] = pageState;
         }
 
@@ -377,12 +351,7 @@ namespace ImageSorter.Common
         /// Populates the page with content passed during navigation.  Any saved state is also
         /// provided when recreating a page from a prior session.
         /// </summary>
-        /// <param name="navigationParameter">The parameter value passed to
-        /// <see cref="Frame.Navigate(Type, Object)"/> when this page was initially requested.
-        /// </param>
-        /// <param name="pageState">A dictionary of state preserved by this page during an earlier
-        /// session.  This will be null the first time a page is visited.</param>
-        protected virtual void LoadState(Object navigationParameter, Dictionary<String, Object> pageState)
+        protected virtual void LoadState()
         {
         }
 
@@ -391,8 +360,7 @@ namespace ImageSorter.Common
         /// page is discarded from the navigation cache.  Values must conform to the serialization
         /// requirements of <see cref="SuspensionManager.SessionState"/>.
         /// </summary>
-        /// <param name="pageState">An empty dictionary to be populated with serializable state.</param>
-        protected virtual void SaveState(Dictionary<String, Object> pageState)
+        protected virtual void SaveState()
         {
         }
 
@@ -402,24 +370,24 @@ namespace ImageSorter.Common
         /// Implementation of IObservableMap that supports reentrancy for use as a default view
         /// model.
         /// </summary>
-        private class ObservableDictionary<K, V> : IObservableMap<K, V>
+        private class ObservableDictionary<TKey, TValue> : IObservableMap<TKey, TValue>
         {
-            private class ObservableDictionaryChangedEventArgs : IMapChangedEventArgs<K>
+            private class ObservableDictionaryChangedEventArgs : IMapChangedEventArgs<TKey>
             {
-                public ObservableDictionaryChangedEventArgs(CollectionChange change, K key)
+                public ObservableDictionaryChangedEventArgs(CollectionChange change, TKey key)
                 {
-                    this.CollectionChange = change;
-                    this.Key = key;
+                    CollectionChange = change;
+                    Key = key;
                 }
 
                 public CollectionChange CollectionChange { get; private set; }
-                public K Key { get; private set; }
+                public TKey Key { get; private set; }
             }
 
-            private Dictionary<K, V> _dictionary = new Dictionary<K, V>();
-            public event MapChangedEventHandler<K, V> MapChanged;
+            private readonly Dictionary<TKey, TValue> _dictionary = new Dictionary<TKey, TValue>();
+            public event MapChangedEventHandler<TKey, TValue> MapChanged;
 
-            private void InvokeMapChanged(CollectionChange change, K key)
+            private void InvokeMapChanged(CollectionChange change, TKey key)
             {
                 var eventHandler = MapChanged;
                 if (eventHandler != null)
@@ -428,90 +396,90 @@ namespace ImageSorter.Common
                 }
             }
 
-            public void Add(K key, V value)
+            public void Add(TKey key, TValue value)
             {
-                this._dictionary.Add(key, value);
-                this.InvokeMapChanged(CollectionChange.ItemInserted, key);
+                _dictionary.Add(key, value);
+                InvokeMapChanged(CollectionChange.ItemInserted, key);
             }
 
-            public void Add(KeyValuePair<K, V> item)
+            public void Add(KeyValuePair<TKey, TValue> item)
             {
-                this.Add(item.Key, item.Value);
+                Add(item.Key, item.Value);
             }
 
-            public bool Remove(K key)
+            public bool Remove(TKey key)
             {
-                if (this._dictionary.Remove(key))
+                if (_dictionary.Remove(key))
                 {
-                    this.InvokeMapChanged(CollectionChange.ItemRemoved, key);
+                    InvokeMapChanged(CollectionChange.ItemRemoved, key);
                     return true;
                 }
                 return false;
             }
 
-            public bool Remove(KeyValuePair<K, V> item)
+            public bool Remove(KeyValuePair<TKey, TValue> item)
             {
-                V currentValue;
-                if (this._dictionary.TryGetValue(item.Key, out currentValue) &&
-                    Object.Equals(item.Value, currentValue) && this._dictionary.Remove(item.Key))
+                TValue currentValue;
+                if (_dictionary.TryGetValue(item.Key, out currentValue) &&
+                    Equals(item.Value, currentValue) && _dictionary.Remove(item.Key))
                 {
-                    this.InvokeMapChanged(CollectionChange.ItemRemoved, item.Key);
+                    InvokeMapChanged(CollectionChange.ItemRemoved, item.Key);
                     return true;
                 }
                 return false;
             }
 
-            public V this[K key]
+            public TValue this[TKey key]
             {
                 get
                 {
-                    return this._dictionary[key];
+                    return _dictionary[key];
                 }
                 set
                 {
-                    this._dictionary[key] = value;
-                    this.InvokeMapChanged(CollectionChange.ItemChanged, key);
+                    _dictionary[key] = value;
+                    InvokeMapChanged(CollectionChange.ItemChanged, key);
                 }
             }
 
             public void Clear()
             {
-                var priorKeys = this._dictionary.Keys.ToArray();
-                this._dictionary.Clear();
+                var priorKeys = _dictionary.Keys.ToArray();
+                _dictionary.Clear();
                 foreach (var key in priorKeys)
                 {
-                    this.InvokeMapChanged(CollectionChange.ItemRemoved, key);
+                    InvokeMapChanged(CollectionChange.ItemRemoved, key);
                 }
             }
 
-            public ICollection<K> Keys
+            public ICollection<TKey> Keys
             {
-                get { return this._dictionary.Keys; }
+                get { return _dictionary.Keys; }
             }
 
-            public bool ContainsKey(K key)
+            public bool ContainsKey(TKey key)
             {
-                return this._dictionary.ContainsKey(key);
+                return _dictionary.ContainsKey(key);
             }
 
-            public bool TryGetValue(K key, out V value)
+            public bool TryGetValue(TKey key, out TValue value)
             {
-                return this._dictionary.TryGetValue(key, out value);
+                return _dictionary.TryGetValue(key, out value);
             }
 
-            public ICollection<V> Values
+            public ICollection<TValue> Values
             {
-                get { return this._dictionary.Values; }
+                get { return _dictionary.Values; }
             }
 
-            public bool Contains(KeyValuePair<K, V> item)
+            public bool Contains(KeyValuePair<TKey, TValue> item)
             {
-                return this._dictionary.Contains(item);
+                return _dictionary.Contains(item);
             }
 
             public int Count
             {
-                get { return this._dictionary.Count; }
+                get { return _dictionary.Count; }
             }
 
             public bool IsReadOnly
@@ -519,20 +487,20 @@ namespace ImageSorter.Common
                 get { return false; }
             }
 
-            public IEnumerator<KeyValuePair<K, V>> GetEnumerator()
+            public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator()
             {
-                return this._dictionary.GetEnumerator();
+                return _dictionary.GetEnumerator();
             }
 
             System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
             {
-                return this._dictionary.GetEnumerator();
+                return _dictionary.GetEnumerator();
             }
 
-            public void CopyTo(KeyValuePair<K, V>[] array, int arrayIndex)
+            public void CopyTo(KeyValuePair<TKey, TValue>[] array, int arrayIndex)
             {
                 int arraySize = array.Length;
-                foreach (var pair in this._dictionary)
+                foreach (var pair in _dictionary)
                 {
                     if (arrayIndex >= arraySize) break;
                     array[arrayIndex++] = pair;
